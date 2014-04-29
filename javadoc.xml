@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<project default="javadoc" >
+
+    <target name="javadoc" >
+
+        <javadoc
+            access="private"
+            additionalparam="-bootclasspath C:\android_sdk\platforms\android-19\android.jar"
+            author="true"
+            classpath="libs/gson-2.2.4.jar;libs/gson-2.2.4-javadoc.jar;libs/gson-2.2.4-sources.jar;libs/android-support-v13.jar"
+            destdir="doc"
+            nodeprecated="false"
+            nodeprecatedlist="false"
+            noindex="false"
+            nonavbar="false"
+            notree="false"
+            packagenames="com.hv15.aperi.interfaces,com.hv15.aperi.database,com.hv15.aperi.network,com.hv15.aperi.adaptors,com.hv15.aperi.services"
+            source="1.7"
+            sourcefiles="src/com/hv15/aperi/DeviceDetailFragment.java,src/com/hv15/aperi/AperiMainActivity.java,src/com/hv15/aperi/AperiBroadcastReceiver.java,src/com/hv15/aperi/DeviceListFragment.java,src/com/hv15/aperi/ItemDetailDialogFragment.java,src/com/hv15/aperi/SelfFragment.java"
+            sourcepath="gen;src"
+            splitindex="true"
+            use="true"
+            version="true" >
+
+            <link href="jar:platform:/resource/Aperi/libs/gson-2.2.4-javadoc.jar!/" />
+
+            <link href="file:/C:/android_sdk/docs/reference" />
+        </javadoc>
+    </target>
+
+</project>

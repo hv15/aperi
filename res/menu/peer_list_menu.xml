@@ -1,0 +1,9 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android" >
+
+    <item
+        android:id="@+id/atn_direct_discover"
+        android:icon="@drawable/ic_action_reload_peers"
+        android:showAsAction="ifRoom|withText"
+        android:title="@string/discover_peers_button"/>
+
+</menu>
