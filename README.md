@@ -1,5 +1,5 @@
-Aperi -- A Wi-Fi Direct Demo
-============================
+Aperi - A Wi-Fi Direct Demo
+===========================
 
 About
 -----
@@ -26,9 +26,11 @@ it out further. I hope that in the near future it will:
 License
 -------
 
-For the moment I have not decided if I should license this or release it to the
-public domain. This hopefully will change soon.
+This project is licensed under the Apache License (version 2) which can be
+viewed in the root directory in `LICENSE` or [online][license].
 
 [wifip2p]:
 http://developer.android.com/reference/android/net/wifi/p2p/package-summary.html
 "The Android net.wifi.p2p API"
+[license]:
+http://www.apache.org/licenses/LICENSE-2.0.html "Apache License, Version 2.0"
