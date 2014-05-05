@@ -143,8 +143,8 @@ public class SelfFragment extends ListFragment implements GroupInfoListener,
     {
         Log.i(AperiMainActivity.TAG,
                 "Connection info recieved\n" + info.toString());
-        ((AperiMainActivity) getActivity()).mSocketService.sendHandShake(info,
-                mDevice);
+        ((AperiMainActivity) getActivity()).mSocketService
+                .sendHandShakeConnect(info, mDevice);
     }
 
     protected void getData()

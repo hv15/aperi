@@ -4,7 +4,6 @@ package com.hv15.aperi.services;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -85,35 +84,21 @@ public class SocketService extends Service
         mDatabase = callback;
     }
 
-    public void sendHandShake(WifiP2pInfo info, WifiP2pDevice self)
+    public void sendHandShakeConnect(WifiP2pInfo info, WifiP2pDevice self)
     {
         mSelf = self;
         mClient = new Thread(execClient(
-                info.groupOwnerAddress.getHostAddress(), self,
-                NetPackage.REQUEST));
+                info.groupOwnerAddress.getHostAddress(), new NetPackage(
+                        self.deviceName, self.deviceAddress, null,
+                        NetPackage.CONNECT)));
         mClient.start();
     }
     
     public void sendHandShakeDisconnect()
     {
-        for (String[] device : mDatabase.getClients())
-        {
-            new Thread(execClient(device[1], mSelf, NetPackage.RESPOND))
-                    .start();
-        }
-    }
-
-    private void sendHandShakeResponse(String goal, WifiP2pDevice self)
-    {
-        mClient = new Thread(execClient(goal, self, NetPackage.RESPOND));
-        mClient.start();
-    }
-
-    private void sendHandShakeFlood(InetAddress goal)
-    {
-        for (String[] device : mDatabase.getClients())
-        {
-            new Thread(execFlood(goal, device)).start();
+        for (String[] device : mDatabase.getClients()) {
+            new Thread(execClient(device[1], new NetPackage(mSelf.deviceName,
+                    mSelf.deviceAddress, null, NetPackage.DISCONNECT))).start();
         }
     }
 
@@ -145,7 +130,8 @@ public class SocketService extends Service
                             String out = mOIS.readUTF();
                             mPackage = new Gson().fromJson(out,
                                     NetPackage.class);
-                            processPacket(mIncomingSocket.getInetAddress(),
+                            processPacket(mIncomingSocket.getInetAddress()
+                                    .getHostAddress(),
                                     mPackage);
                             // This could be problematic...
                             sendUpdateUIRequest();
@@ -187,14 +173,12 @@ public class SocketService extends Service
         };
     }
 
-    private Runnable execClient(final String goal, final WifiP2pDevice self,
-            final int type)
+    private Runnable execClient(final String goal, final NetPackage packet)
     {
         return new Runnable()
         {
             private String mGoal = goal;
-            private NetPackage mPackage = new NetPackage(self, type);
-            private String mSerSelf = new Gson().toJson(mPackage);
+            private String mSerSelf = new Gson().toJson(packet);
             private Socket mSocket;
             private ObjectOutputStream mOOS;
 
@@ -202,14 +186,15 @@ public class SocketService extends Service
             public void run()
             {
                 Log.i(AperiMainActivity.TAG,
-                        "Starting HandshakeClient, sending handshake");
+                        "Starting HandshakeClient, sending handshake type => "
+                                + NetPackage.type[packet.packetType]);
                 try {
                     mSocket = new Socket();
                     mSocket.setReuseAddress(true);
                     mSocket.connect(new InetSocketAddress(mGoal, mPort), 5000);
                     mOOS = new ObjectOutputStream(mSocket.getOutputStream());
                     mOOS.writeUTF(mSerSelf);
-                    Log.i(AperiMainActivity.TAG, "HandShakeClient package sent");
+                    Log.i(AperiMainActivity.TAG, "HandShakeClient packet sent");
                 } catch (SocketException e) {
                     Log.e(AperiMainActivity.TAG,
                             "Client Socket failed =\n" + e.toString());
@@ -236,54 +221,6 @@ public class SocketService extends Service
         };
     }
 
-    private Runnable execFlood(final InetAddress goal, final String[] device)
-    {
-        return new Runnable()
-        {
-            private InetAddress mGoal = goal;
-            private NetPackage mPackage = new NetPackage(device[0], device[1]);
-            private String mSerSelf = new Gson().toJson(mPackage);
-            private Socket mSocket;
-            private ObjectOutputStream mOOS;
-
-            @Override
-            public void run()
-            {
-                Log.i(AperiMainActivity.TAG,
-                        "Starting HandshakeFlood, sending handshake");
-                try {
-                    mSocket = new Socket();
-                    mSocket.setReuseAddress(true);
-                    mSocket.connect(new InetSocketAddress(mGoal, mPort), 5000);
-                    mOOS = new ObjectOutputStream(mSocket.getOutputStream());
-                    mOOS.writeUTF(mSerSelf);
-                    Log.i(AperiMainActivity.TAG, "HandShakeFlood package sent");
-                } catch (SocketException e) {
-                    Log.e(AperiMainActivity.TAG,
-                            "Client Socket failed =\n" + e.toString());
-                } catch (IOException e) {
-                    Log.e(AperiMainActivity.TAG,
-                            "Client could not send flood handshake =\n"
-                                    + e.toString());
-                } finally {
-                    try {
-                        if (mOOS != null) {
-                            mOOS.close();
-                        }
-                        if (mSocket != null) {
-                            mSocket.close();
-                        }
-                    } catch (IOException e) {
-                        Log.e(AperiMainActivity.TAG,
-                                "Client Socket failed, unrecoverable!");
-                        e.printStackTrace();
-                    }
-                }
-                Log.d(AperiMainActivity.TAG, "HandshakeFlood finished...");
-            }
-        };
-    }
-
     private Runnable toasty(final String message, final int color)
     {
         return new Runnable() {
@@ -304,35 +241,46 @@ public class SocketService extends Service
         mBroadcast.sendBroadcast(update);
     }
 
-    private void processPacket(InetAddress goal, NetPackage packet)
+    private void processPacket(String sender, NetPackage packet)
     {
-        String message = "Paket processed ";
-        switch (packet.getType()) {
-            case NetPackage.REQUEST:
-                sendHandShakeFlood(goal);
-                mDatabase.addClient(packet.getMac(), goal.getHostAddress());
-                message += packet.getName() + " [" + packet.getMac() + "]: "
-                        + goal.getHostAddress();
+        String message = "Paket processed => ";
+        switch (packet.packetType) {
+            case NetPackage.CONNECT:
+                for(String[] device : mDatabase.getClients()){
+                    new Thread(
+                            execClient(device[1], new NetPackage(
+                                    packet.deviceName, packet.deviceAddress,
+                                    sender, NetPackage.RESPOND)))
+                            .start();
+                }
+                mDatabase
+                        .addClient(packet.deviceAddress, sender);
+                message += "Added " + packet.deviceName + " [" + packet.deviceAddress
+                        + "]: " + sender;
                 break;
             case NetPackage.RESPOND:
-                mDatabase.addClient(packet.getMac(), goal.getHostAddress());
-                message += packet.getName() + " [" + packet.getMac() + "]: "
-                        + goal.getHostAddress();
+                mDatabase.addClient(packet.deviceAddress, packet.deviceIP);
+                new Thread(
+                        execClient(packet.deviceIP, new NetPackage(
+                                mSelf.deviceName, mSelf.deviceAddress, null,
+                                NetPackage.HELLO))).start();
+                message += "Added " + packet.deviceName + " [" + packet.deviceAddress
+                        + "]: " + packet.deviceIP;
                 break;
-            case NetPackage.FLOOD:
-                // This should send out a cascading number of packets. This
-                // could get messy
-                if(mSelf != null){
-                    sendHandShakeResponse(packet.getIP(), mSelf);
-                }
-                mDatabase.addClient(packet.getMac(), packet.getIP());
-                message += packet.getName() + " [" + packet.getMac() + "]: "
-                        + packet.getIP();
+            case NetPackage.HELLO:
+                mDatabase.addClient(packet.deviceAddress,
+                        sender);
+                message += "Added " + packet.deviceName + " [" + packet.deviceAddress
+                        + "]: " + sender;
                 break;
             case NetPackage.DISCONNECT:
-
+                mDatabase.delClient(packet.deviceAddress);
+                message += "Removed " + packet.deviceName + " ["
+                        + packet.deviceAddress
+                        + "]: " + sender;
                 break;
             default:
+                message += "ERROR, unknown packet recieved -> " + packet;
                 break;
         }
         Log.i(AperiMainActivity.TAG, message);
