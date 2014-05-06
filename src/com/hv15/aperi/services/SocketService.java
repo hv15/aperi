@@ -8,6 +8,7 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.util.ArrayList;
 
 import android.app.Service;
 import android.content.Intent;
@@ -93,12 +94,27 @@ public class SocketService extends Service
                         NetPackage.CONNECT)));
         mClient.start();
     }
-    
+
     public void sendHandShakeDisconnect()
     {
+        NetPackage packet = new NetPackage(mSelf.deviceName,
+                mSelf.deviceAddress, null, NetPackage.DISCONNECT);
+        ArrayList<Thread> threads = new ArrayList<Thread>(5);
         for (String[] device : mDatabase.getClients()) {
-            new Thread(execClient(device[1], new NetPackage(mSelf.deviceName,
-                    mSelf.deviceAddress, null, NetPackage.DISCONNECT))).start();
+            Thread thread = new Thread(execClient(device[1], packet));
+            thread.start();
+            threads.add(thread);
+        }
+
+        for (Thread thread : threads) {
+            try {
+                thread.join();
+            } catch (InterruptedException e) {
+                Log.e(AperiMainActivity.TAG,
+                        "Something went wrong with sending disconnect packets: ");
+                e.printStackTrace();
+                break;
+            }
         }
     }
 
@@ -246,7 +262,7 @@ public class SocketService extends Service
         String message = "Paket processed => ";
         switch (packet.packetType) {
             case NetPackage.CONNECT:
-                for(String[] device : mDatabase.getClients()){
+                for (String[] device : mDatabase.getClients()) {
                     new Thread(
                             execClient(device[1], new NetPackage(
                                     packet.deviceName, packet.deviceAddress,
@@ -255,7 +271,8 @@ public class SocketService extends Service
                 }
                 mDatabase
                         .addClient(packet.deviceAddress, sender);
-                message += "Added " + packet.deviceName + " [" + packet.deviceAddress
+                message += "Added " + packet.deviceName + " ["
+                        + packet.deviceAddress
                         + "]: " + sender;
                 break;
             case NetPackage.RESPOND:
@@ -264,13 +281,15 @@ public class SocketService extends Service
                         execClient(packet.deviceIP, new NetPackage(
                                 mSelf.deviceName, mSelf.deviceAddress, null,
                                 NetPackage.HELLO))).start();
-                message += "Added " + packet.deviceName + " [" + packet.deviceAddress
+                message += "Added " + packet.deviceName + " ["
+                        + packet.deviceAddress
                         + "]: " + packet.deviceIP;
                 break;
             case NetPackage.HELLO:
                 mDatabase.addClient(packet.deviceAddress,
                         sender);
-                message += "Added " + packet.deviceName + " [" + packet.deviceAddress
+                message += "Added " + packet.deviceName + " ["
+                        + packet.deviceAddress
                         + "]: " + sender;
                 break;
             case NetPackage.DISCONNECT:

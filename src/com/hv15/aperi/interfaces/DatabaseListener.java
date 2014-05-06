@@ -43,4 +43,11 @@ public interface DatabaseListener
      * @return {@link ArrayList} of String arrays, format <code>{mac, ip}</code>
      */
     public ArrayList<String[]> getClients();
+
+    /**
+     * Get the number of rows in the database
+     * 
+     * @return number of rows
+     */
+    public int size();
 }

@@ -16,6 +16,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.database.Cursor;
+import android.database.DatabaseUtils;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.wifi.p2p.WifiP2pConfig;
@@ -109,6 +110,14 @@ public class AperiMainActivity extends Activity implements ChannelListener,
                     DatabaseHelper.DATABASE_MAC + " = ?", new String[] {
                         mac
                     });
+        }
+
+        @Override
+        public int size()
+        {
+            SQLiteDatabase db = mDatabaseH.getReadableDatabase();
+            return (int) DatabaseUtils.queryNumEntries(db,
+                    DatabaseHelper.DATABASE_TABLE);
         }
 
         @Override
@@ -307,21 +316,29 @@ public class AperiMainActivity extends Activity implements ChannelListener,
      */
     protected static String getDeviceStatus(int deviceStatus)
     {
-        Log.d(AperiMainActivity.TAG, "Peer status :" + deviceStatus);
+        String status;
         switch (deviceStatus) {
             case WifiP2pDevice.AVAILABLE:
-                return "Available";
+                status = "Available";
+                break;
             case WifiP2pDevice.INVITED:
-                return "Invited";
+                status = "Invited";
+                break;
             case WifiP2pDevice.CONNECTED:
-                return "Connected";
+                status = "Connected";
+                break;
             case WifiP2pDevice.FAILED:
-                return "Failed";
+                status = "Failed";
+                break;
             case WifiP2pDevice.UNAVAILABLE:
-                return "Unavailable";
+                status = "Unavailable";
+                break;
             default:
-                return "Unknown";
+                status = "Unknown";
+                break;
         }
+        Log.d(AperiMainActivity.TAG, "Peer status: " + status);
+        return status;
     }
 
     /**
@@ -485,8 +502,12 @@ public class AperiMainActivity extends Activity implements ChannelListener,
                             @Override
                             public void onFailure(int reasonCode)
                             {
+                                String reason = reasonCode == WifiP2pManager.P2P_UNSUPPORTED ? "P2P not supported"
+                                        : (reasonCode == WifiP2pManager.ERROR ? "Error"
+                                                : (reasonCode == WifiP2pManager.BUSY) ? "System Busy, try again later"
+                                                        : "Unknown :'(");
                                 Toast.makeText(AperiMainActivity.this,
-                                        "Discovery Failed : " + reasonCode,
+                                        "Discovery Failed : " + reason,
                                         Toast.LENGTH_SHORT).show();
                             }
                         });
