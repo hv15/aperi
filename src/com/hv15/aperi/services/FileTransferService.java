@@ -15,7 +15,7 @@ import android.net.Uri;
 import android.util.Log;
 
 import com.hv15.aperi.AperiMainActivity;
-import com.hv15.aperi.DeviceDetailFragment;
+import com.hv15.aperi.SelfFragment;
 
 /**
  * A service that process each file transfer request i.e Intent by opening a
@@ -24,7 +24,7 @@ import com.hv15.aperi.DeviceDetailFragment;
 public class FileTransferService extends IntentService {
 
     private static final int SOCKET_TIMEOUT = 5000;
-    public static final String ACTION_SEND_FILE = "com.example.android.wifidirect.SEND_FILE";
+    public static final String ACTION_SEND_FILE = "com.hv15.aperi.SEND_FILE";
     public static final String EXTRAS_FILE_PATH = "file_url";
     public static final String EXTRAS_GROUP_OWNER_ADDRESS = "go_host";
     public static final String EXTRAS_GROUP_OWNER_PORT = "go_port";
@@ -65,7 +65,7 @@ public class FileTransferService extends IntentService {
                 } catch (FileNotFoundException e) {
                     Log.d(AperiMainActivity.TAG, e.toString());
                 }
-                DeviceDetailFragment.copyFile(is, stream);
+                SelfFragment.copyFile(is, stream);
                 Log.d(AperiMainActivity.TAG, "Client: Data written");
             } catch (IOException e) {
                 Log.e(AperiMainActivity.TAG, e.getMessage());

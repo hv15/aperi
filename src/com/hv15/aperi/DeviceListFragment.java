@@ -8,6 +8,8 @@ import android.app.ListFragment;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
+import android.net.Uri;
 import android.net.wifi.WpsInfo;
 import android.net.wifi.p2p.WifiP2pConfig;
 import android.net.wifi.p2p.WifiP2pDevice;
@@ -31,6 +33,7 @@ import android.widget.TextView;
 import android.widget.ToggleButton;
 
 import com.hv15.aperi.interfaces.DeviceActionListener;
+import com.hv15.aperi.services.FileTransferService;
 
 /**
  * A ListFragment that displays available peers on discovery and requests the
@@ -39,11 +42,13 @@ import com.hv15.aperi.interfaces.DeviceActionListener;
 public class DeviceListFragment extends ListFragment implements
         PeerListListener
 {
+    protected static final int CHOOSE_FILE_RESULT_CODE = 20;
     private List<WifiP2pDevice> peers = new ArrayList<WifiP2pDevice>();
     private ProgressDialog mProgressDialog = null;
     private View mContentView = null;
     private WifiP2pDevice mDevice;
     private int mGroupyness = 0;
+    private WifiP2pDevice mSender;
 
     @Override
     public void onActivityCreated(Bundle savedInstanceState)
@@ -99,11 +104,35 @@ public class DeviceListFragment extends ListFragment implements
         frag.show(getFragmentManager(), "dialog");
     }
 
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data)
+    {
+        // User has picked an image. Transfer it to group owner i.e peer using
+        // FileTransferService.
+        Uri uri = data.getData();
+        String ip = ((AperiMainActivity) getActivity()).getDeviceIP(mSender.deviceAddress);
+        // TextView statusText = (TextView) mContentView
+        // .findViewById(R.id.status_text);
+        // statusText.setText("Sending: " + uri);
+        Log.d(AperiMainActivity.TAG, "Intent----------- " + uri);
+        Intent serviceIntent = new Intent(getActivity(),
+                FileTransferService.class);
+        serviceIntent.setAction(FileTransferService.ACTION_SEND_FILE);
+        serviceIntent.putExtra(FileTransferService.EXTRAS_FILE_PATH,
+                uri.toString());
+        serviceIntent.putExtra(FileTransferService.EXTRAS_GROUP_OWNER_ADDRESS,
+                ip);
+        serviceIntent.putExtra(FileTransferService.EXTRAS_GROUP_OWNER_PORT,
+                8988);
+        getActivity().startService(serviceIntent);
+    }
+
     /**
      * Array adapter for ListFragment that maintains WifiP2pDevice list.
      */
     private class WiFiPeerListAdapter extends ArrayAdapter<WifiP2pDevice>
     {
+
         private List<WifiP2pDevice> devices;
 
         /**
@@ -204,8 +233,12 @@ public class DeviceListFragment extends ListFragment implements
                     @Override
                     public void onClick(View v)
                     {
-                        // TODO Auto-generated method stub
-
+                        // Allow user to pick an image from Gallery or other
+                        // registered apps
+                        mSender = device;
+                        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                        intent.setType("image/*");
+                        startActivityForResult(intent, CHOOSE_FILE_RESULT_CODE);
                     }
                 });
                 if (device.status == WifiP2pDevice.CONNECTED) {
